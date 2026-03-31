@@ -1,0 +1,6 @@
+spec_version: 1
+name: crypto_risk_env
+type: space
+runtime: fastapi
+app: app.main:app
+port: 7860
