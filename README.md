@@ -1,3 +1,11 @@
+---
+title: Crypto Risk Env
+emoji: 📈
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
 # CryptoRiskEnv — OpenEnv for LLM Risk Management Evaluation
 
 <p align="center">
