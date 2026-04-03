@@ -5,6 +5,7 @@ colorFrom: blue
 colorTo: green
 sdk: docker
 pinned: false
+tags: [openenv]
 ---
 # CryptoRiskEnv — OpenEnv for LLM Risk Management Evaluation
 

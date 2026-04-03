@@ -1,6 +1,20 @@
 spec_version: 1
 name: crypto_risk_env
-type: space
+type: environment
 runtime: fastapi
 app: app.main:app
 port: 7860
+metadata:
+  description: "An OpenEnv-compliant environment for evaluating LLM agents on cryptocurrency risk management discipline."
+  version: 1.0.0
+  author: ARKAISW
+  difficulty_range: [0.0, 1.0]
+observation_space:
+  type: json
+  schema: Observation
+action_space:
+  type: json
+  schema: Action
+reward_space:
+  type: json
+  schema: Reward

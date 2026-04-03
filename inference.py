@@ -174,7 +174,7 @@ def reset_env(task_id: str) -> Dict[str, Any]:
 
 
 def step_env(action: Dict[str, Any]) -> Dict[str, Any]:
-    return env_request("POST", "/step", {"action": action})
+    return env_request("POST", "/step", action)
 
 
 def grade_env() -> Dict[str, Any]:
@@ -294,8 +294,10 @@ def run_task(client: OpenAI, task_id: str, task_name: str, max_steps: int) -> Di
     print(f"  Task: {task_name} ({task_id}) -- {max_steps} steps")
     print(f"{'='*60}")
 
+    print(f"[START] {task_id}")
+
     reset_data = reset_env(task_id)
-    observation = reset_data["observation"]
+    observation = reset_data
     print(f"  Initial price: ${observation['current_price']:,.2f}")
     print(f"  Risk budget:   ${observation['max_trade_size']:,.2f}")
     print(f"  Stop-loss:     ${observation['suggested_stop_loss']:,.2f}")
@@ -312,6 +314,8 @@ def run_task(client: OpenAI, task_id: str, task_name: str, max_steps: int) -> Di
             print(f"  ${action['amount']:>10,.2f}", end="")
         else:
             print(f"  {'--':>11s}", end="")
+
+        print(f"\n[STEP] {json.dumps(action)}")
 
         step_data = step_env(action)
         observation = step_data["observation"]
@@ -332,6 +336,7 @@ def run_task(client: OpenAI, task_id: str, task_name: str, max_steps: int) -> Di
     reason = grade_result["reason"]
     breakdown = grade_result.get("breakdown", {})
 
+    print(f"[END] {score}")
     print(f"\n  Score:  {score:.4f}")
     print(f"  Reason: {reason}")
 

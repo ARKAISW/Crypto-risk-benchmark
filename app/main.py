@@ -26,11 +26,10 @@ from app.models import (
     Action,
     GradeResponse,
     ResetRequest,
-    ResetResponse,
     StateResponse,
-    StepRequest,
     StepResponse,
     TaskListResponse,
+    Observation,
 )
 from app.tasks import create_env_for_task, get_task_list, grade_task
 
@@ -94,8 +93,8 @@ def list_tasks():
     return TaskListResponse(tasks=get_task_list())
 
 
-@app.post("/reset", response_model=ResetResponse)
-def reset(request: ResetRequest = Body(default_factory=ResetRequest)):
+@app.post("/reset", response_model=Observation)
+def reset(request: ResetRequest | None = Body(default=None)):
     """Reset the environment for the specified task and return the initial observation.
 
     If no request body is provided, defaults to the 'easy' task.
@@ -103,30 +102,19 @@ def reset(request: ResetRequest = Body(default_factory=ResetRequest)):
     """
     global _env
     # Handle empty body (validator ping)
-    if request is None:
-        request = ResetRequest(task_id="easy")
+    task_id = request.task_id if request else "easy"
 
     try:
-        _env = create_env_for_task(request.task_id)
+        _env = create_env_for_task(task_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
     obs = _env.reset()
-    return ResetResponse(
-        observation=obs,
-        info={
-            "task_id": request.task_id,
-            "max_steps": _env.max_steps,
-            "initial_balance": 100_000.0,
-            "risk_limit_pct": 1.0,
-            "transaction_fee_pct": 0.1,
-            "environment": "CryptoRiskEnv",
-        },
-    )
+    return obs
 
 
 @app.post("/step", response_model=StepResponse)
-def step(request: StepRequest):
+def step(action: Action = Body(...)):
     """Submit an action and advance the environment by one step."""
     env = _get_env()
     if env.done:
@@ -135,7 +123,7 @@ def step(request: StepRequest):
             detail="Episode is done. Call /reset to start a new episode.",
         )
     try:
-        obs, reward, done, info = env.step(request.action)
+        obs, reward, done, info = env.step(action)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return StepResponse(observation=obs, reward=reward, done=done, info=info)
@@ -146,7 +134,6 @@ def state():
     """Retrieve the full current environment state."""
     env = _get_env()
     s = env.state()
-    from app.models import Observation
 
     return StateResponse(
         observation=Observation(**s["observation"]),

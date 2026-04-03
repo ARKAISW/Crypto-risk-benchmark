@@ -42,7 +42,7 @@ def t3():
     r = requests.post(f"{base}/reset", json={"task_id": "easy"})
     assert r.status_code == 200
     data = r.json()
-    obs = data["observation"]
+    obs = data
     assert "current_price" in obs
     assert "rsi" in obs
     assert "max_trade_size" in obs
@@ -53,7 +53,7 @@ test("POST /reset (easy)", t3)
 # 4. Step Hold
 def t4():
     requests.post(f"{base}/reset", json={"task_id": "easy"})
-    r = requests.post(f"{base}/step", json={"action": {"action": "Hold", "amount": None}})
+    r = requests.post(f"{base}/step", json={"action": "Hold", "amount": None})
     assert r.status_code == 200
     data = r.json()
     assert "observation" in data
@@ -69,7 +69,7 @@ test("POST /step (Hold)", t4)
 # 5. State
 def t5():
     requests.post(f"{base}/reset", json={"task_id": "easy"})
-    requests.post(f"{base}/step", json={"action": {"action": "Hold", "amount": None}})
+    requests.post(f"{base}/step", json={"action": "Hold", "amount": None})
     r = requests.get(f"{base}/state")
     assert r.status_code == 200
     state = r.json()
@@ -86,7 +86,7 @@ test("GET /state", t5)
 def t6():
     requests.post(f"{base}/reset", json={"task_id": "easy"})
     for i in range(5):
-        r = requests.post(f"{base}/step", json={"action": {"action": "Hold", "amount": None}})
+        r = requests.post(f"{base}/step", json={"action": "Hold", "amount": None})
         assert r.status_code == 200
     r = requests.post(f"{base}/grade")
     assert r.status_code == 200
@@ -104,7 +104,7 @@ def t7():
             action = {"action": "Buy", "amount": 100}
         else:
             action = {"action": "Hold", "amount": None}
-        r = requests.post(f"{base}/step", json={"action": action})
+        r = requests.post(f"{base}/step", json=action)
     r = requests.post(f"{base}/grade")
     grade = r.json()
     assert grade["score"] == 0.0, f"Expected 0.0, got {grade['score']}"
@@ -122,7 +122,7 @@ def t8():
             action = {"action": "Sell", "amount": 500.0}
         else:
             action = {"action": "Hold", "amount": None}
-        r = requests.post(f"{base}/step", json={"action": action})
+        r = requests.post(f"{base}/step", json=action)
         info = r.json().get("info", {})
         if info.get("risk_violation"):
             violations += 1
@@ -143,7 +143,7 @@ def t9():
             action = {"action": "Hold", "amount": None}
         else:
             action = {"action": "Sell", "amount": 500.0}
-        r = requests.post(f"{base}/step", json={"action": action})
+        r = requests.post(f"{base}/step", json=action)
     r = requests.post(f"{base}/grade")
     grade = r.json()
     assert 0.0 <= grade["score"] <= 1.0
@@ -160,7 +160,7 @@ def t10():
             action = {"action": "Sell", "amount": 700.0}
         else:
             action = {"action": "Hold", "amount": None}
-        r = requests.post(f"{base}/step", json={"action": action})
+        r = requests.post(f"{base}/step", json=action)
     r = requests.post(f"{base}/grade")
     grade = r.json()
     assert 0.0 <= grade["score"] <= 1.0
@@ -172,7 +172,7 @@ test("Hard task: mixed trading", t10)
 def t11():
     r = requests.post(f"{base}/reset")
     assert r.status_code == 200
-    assert "observation" in r.json()
+    assert "current_price" in r.json()
 test("POST /reset (empty body — validator)", t11)
 
 # 12. Grader scores are different (not constant)
@@ -181,14 +181,14 @@ def t12():
     # Run easy with hold
     requests.post(f"{base}/reset", json={"task_id": "easy"})
     for _ in range(5):
-        requests.post(f"{base}/step", json={"action": {"action": "Hold", "amount": None}})
+        requests.post(f"{base}/step", json={"action": "Hold", "amount": None})
     s1 = requests.post(f"{base}/grade").json()["score"]
     scores.add(s1)
     
     # Run easy with buy
     requests.post(f"{base}/reset", json={"task_id": "easy"})
     for _ in range(5):
-        requests.post(f"{base}/step", json={"action": {"action": "Buy", "amount": 100}})
+        requests.post(f"{base}/step", json={"action": "Buy", "amount": 100})
     s2 = requests.post(f"{base}/grade").json()["score"]
     scores.add(s2)
     

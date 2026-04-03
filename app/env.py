@@ -272,7 +272,20 @@ class CryptoRiskEnv:
         price = self._current_price()
         info: Dict[str, Any] = {}
         portfolio_val = self.portfolio.value_at(price)
-        risk_limit = portfolio_val * RISK_FRACTION  # 1% of portfolio = max dollar risk
+        
+        # Calculate risk-compliant trade size (Amount that risks 1% of portfolio)
+        history = self._price_history()
+        atr_val = _atr(history)
+        risk_budget = portfolio_val * RISK_FRACTION
+        
+        # Stop-loss distance (default to 2*ATR)
+        risk_per_share = price - (action.stop_loss if (action.stop_loss and action.stop_loss > 0) else (price - 2 * atr_val if atr_val > 0 else price * 0.98))
+        risk_per_share = max(risk_per_share, 0.01)
+        
+        # Max allowed trade size (USD) to keep risk at 1%
+        max_trade_limit = (risk_budget / risk_per_share) * price
+        # Also cap by available cash or 100% of portfolio for safety
+        max_trade_limit = min(max_trade_limit, portfolio_val * 2.0)
 
         # ---- Track risk compliance ------------------------------------------
         risk_violated = False
@@ -281,20 +294,19 @@ class CryptoRiskEnv:
         trade_amount = 0.0
 
         if action.action == ActionType.BUY:
-            desired = action.amount if action.amount is not None else risk_limit
+            desired = action.amount if action.amount is not None else max_trade_limit
             desired = max(0.0, desired)
 
-            # Risk check: amount must not exceed risk budget
-            if desired > risk_limit * 1.001:  # small tolerance for floating point
+            # Risk check: amount must not exceed the position size that risks 1%
+            if desired > max_trade_limit * 1.05:  # 5% tolerance
                 risk_violated = True
-                violation_severity = (desired - risk_limit) / risk_limit
-                risk_penalty = -0.3 * min(violation_severity, 3.0)  # up to -0.9
+                violation_severity = (desired - max_trade_limit) / max_trade_limit
+                risk_penalty = -0.3 * min(violation_severity, 3.0)
                 self.portfolio.risk_violations += 1
                 info["risk_violation"] = True
                 info["desired_amount"] = round(desired, 2)
-                info["risk_limit"] = round(risk_limit, 2)
-                info["violation_severity"] = round(violation_severity, 4)
-                desired = risk_limit  # clamp to limit
+                info["max_trade_limit"] = round(max_trade_limit, 2)
+                desired = max_trade_limit
 
             # Execute buy
             fee = desired * TRANSACTION_FEE_RATE
@@ -349,18 +361,6 @@ class CryptoRiskEnv:
                 max_sell_value = self.portfolio.holdings * price
                 desired_sell = action.amount if action.amount is not None else max_sell_value
                 desired_sell = max(0.0, min(desired_sell, max_sell_value))
-
-                # Risk check on sell
-                if desired_sell > risk_limit * 1.001:
-                    risk_violated = True
-                    violation_severity = (desired_sell - risk_limit) / risk_limit
-                    risk_penalty = -0.3 * min(violation_severity, 3.0)
-                    self.portfolio.risk_violations += 1
-                    info["risk_violation"] = True
-                    info["desired_amount"] = round(desired_sell, 2)
-                    info["risk_limit"] = round(risk_limit, 2)
-                    info["violation_severity"] = round(violation_severity, 4)
-                    desired_sell = risk_limit
 
                 if desired_sell > 0:
                     qty_to_sell = desired_sell / price
@@ -526,8 +526,8 @@ class CryptoRiskEnv:
         # 1:2 Risk/Reward target
         reward_target = price + risk_per_share * RISK_REWARD_TARGET
 
-        # Max trade size = the smaller of suggested position and risk budget
-        max_trade = min(suggested_position, risk_budget)
+        # Max trade size = amount that risks 1% of portfolio
+        max_trade = suggested_position
 
         return Observation(
             current_price=price,

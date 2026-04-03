@@ -161,18 +161,6 @@ class ResetRequest(BaseModel):
     """Request body for /reset endpoint."""
     task_id: str = Field("easy", description="ID of the task to start (easy/medium/hard)")
 
-
-class ResetResponse(BaseModel):
-    """Response from /reset endpoint."""
-    observation: Observation
-    info: Dict[str, Any] = Field(default_factory=dict)
-
-
-class StepRequest(BaseModel):
-    """Request body for /step endpoint."""
-    action: Action
-
-
 class StepResponse(BaseModel):
     """Response from /step endpoint."""
     observation: Observation
