@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "server.app:app"
+server = "server.app:main"
 
 [project.urls]
 "Homepage" = "https://huggingface.co/spaces/ARKAISW/CryptoRiskEnv"

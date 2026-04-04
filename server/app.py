@@ -159,11 +159,12 @@ def grade():
     return GradeResponse(**result)
 
 
-# ---------------------------------------------------------------------------
-# Uvicorn entry point for HF Spaces and Docker
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
+def main():
+    """Entry point for the server as required by OpenEnv validator."""
     import uvicorn
     port = int(os.environ.get("PORT", "7860"))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+
+if __name__ == "__main__":
+    main()
