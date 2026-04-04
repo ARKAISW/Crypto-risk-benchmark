@@ -24,8 +24,8 @@ import math
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List
 
-from app.env import INITIAL_BALANCE, CryptoRiskEnv
-from app.models import TaskInfo
+from server.env import INITIAL_BALANCE, CryptoRiskEnv
+from server.models import TaskInfo
 
 
 # ---------------------------------------------------------------------------

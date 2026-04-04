@@ -2,7 +2,7 @@ spec_version: 1
 name: crypto_risk_env
 type: environment
 runtime: fastapi
-app: app.main:app
+app: server.app:app
 port: 7860
 metadata:
   description: "An OpenEnv-compliant environment for evaluating LLM agents on cryptocurrency risk management discipline."

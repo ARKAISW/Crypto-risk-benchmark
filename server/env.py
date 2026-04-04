@@ -27,7 +27,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.models import Action, ActionType, Observation, Reward
+from server.models import Action, ActionType, Observation, Reward
 
 # ---------------------------------------------------------------------------
 # Constants

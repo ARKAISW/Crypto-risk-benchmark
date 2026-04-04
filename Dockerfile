@@ -7,8 +7,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY app/ ./app/
+COPY server/ ./server/
 COPY openenv.yaml .
+COPY pyproject.toml .
 COPY inference.py .
 COPY README.md .
 
@@ -21,4 +22,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 # Run the FastAPI server
 # PORT env var is set by HF Spaces automatically
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]

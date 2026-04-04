@@ -21,8 +21,8 @@ from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from app.env import CryptoRiskEnv
-from app.models import (
+from server.env import CryptoRiskEnv
+from server.models import (
     Action,
     GradeResponse,
     ResetRequest,
@@ -31,7 +31,7 @@ from app.models import (
     TaskListResponse,
     Observation,
 )
-from app.tasks import create_env_for_task, get_task_list, grade_task
+from server.tasks import create_env_for_task, get_task_list, grade_task
 
 # ---------------------------------------------------------------------------
 # App
