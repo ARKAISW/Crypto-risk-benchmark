@@ -31,11 +31,12 @@ from openai import OpenAI
 # Configuration — reads from environment variables
 # ---------------------------------------------------------------------------
 
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "") or HF_TOKEN
-API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.groq.com/openai/v1")
-MODEL_NAME = os.environ.get("MODEL_NAME", "llama-3.3-70b-versatile")
-ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "http://localhost:7860")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "llama-3.3-70b-versatile")
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or HF_TOKEN
+ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:7860")
 
 MAX_RETRIES = 10
 RETRY_DELAY = 5.0
