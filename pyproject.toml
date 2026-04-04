@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crypto-risk-env"
+version = "1.0.0"
+authors = [
+  { name="ARKAISW" },
+]
+description = "An OpenEnv-compliant environment for evaluating LLM agents on cryptocurrency risk management discipline."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "pydantic>=2.6.0",
+    "openai>=1.14.0",
+    "numpy>=1.26.0",
+    "requests>=2.31.0",
+    "pyyaml>=6.0.1",
+    "httpx>=0.27.0",
+]
+
+[project.urls]
+"Homepage" = "https://huggingface.co/spaces/ARKAISW/CryptoRiskEnv"
+"Bug Tracker" = "https://github.com/ARKAISW/Crypto-risk-benchmark/issues"
