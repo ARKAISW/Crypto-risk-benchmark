@@ -38,8 +38,8 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or HF_TOKEN
 ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:7860")
 
-MAX_RETRIES = 10
-RETRY_DELAY = 5.0
+MAX_RETRIES = 3
+RETRY_DELAY = 2.0
 
 # ---------------------------------------------------------------------------
 # System prompt — teaches the LLM risk management theory
@@ -157,9 +157,9 @@ def env_request(
     for attempt in range(retries):
         try:
             if method == "GET":
-                resp = requests.get(url, timeout=30)
+                resp = requests.get(url, timeout=10.0)
             else:
-                resp = requests.post(url, json=json_data, timeout=30)
+                resp = requests.post(url, json=json_data, timeout=10.0)
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
@@ -374,6 +374,7 @@ def main():
     client = OpenAI(
         api_key=OPENAI_API_KEY,
         base_url=API_BASE_URL,
+        timeout=15.0,
     )
 
     try:
