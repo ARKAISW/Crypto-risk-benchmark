@@ -12,7 +12,7 @@ Three evaluation tasks with increasing difficulty:
   • Hard   — Achieve positive expectancy in extreme volatility (the "pro" test)
 
 All graders:
-  ✓ Produce scores in [0.0, 1.0]
+  ✓ Produce scores strictly in (0, 1) — never exactly 0.0 or 1.0
   ✓ Are deterministic and reproducible
   ✓ Provide detailed breakdowns
   ✓ Never return a constant score
@@ -26,6 +26,19 @@ from typing import Any, Callable, Dict, List
 
 from server.env import INITIAL_BALANCE, CryptoRiskEnv
 from server.models import TaskInfo
+
+
+# ---------------------------------------------------------------------------
+# Score clamping helper — ensures scores are strictly in (0, 1)
+# ---------------------------------------------------------------------------
+
+SCORE_MIN = 0.0001
+SCORE_MAX = 0.9999
+
+
+def _clamp(value: float) -> float:
+    """Clamp a score to strictly within (0, 1)."""
+    return max(SCORE_MIN, min(SCORE_MAX, float(value)))
 
 
 # ---------------------------------------------------------------------------
@@ -147,14 +160,14 @@ def grade_easy(env: CryptoRiskEnv) -> Dict[str, Any]:
     enough_steps = len(actions) >= expected_steps
 
     if all_hold and enough_steps:
-        score = 0.9999
+        score = SCORE_MAX
         reason = (
             f"Agent correctly held for all {len(actions)} steps. "
             f"Demonstrated successful parsing of observation data including "
             f"technical indicators and risk management fields."
         )
     else:
-        score = 0.0001
+        score = SCORE_MIN
         non_hold = [a for a in action_types if a != "Hold"]
         reason = (
             f"Agent failed. Actions: {action_types}. "
@@ -195,7 +208,7 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
 
     # --- Risk compliance (35%) ---
     violations = sum(1 for a in actions if a.get("risk_violated", False))
-    risk_score = max(0.0, 1.0 - violations * 0.15)
+    risk_score = _clamp(1.0 - violations * 0.15)
 
     # --- Position sizing quality (25%) ---
     # Check if the agent used reasonable trade sizes (close to suggested amounts)
@@ -207,33 +220,33 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
         # Bonus if agent set stop-losses
         with_stops = sum(1 for a in actions if a.get("stop_loss") is not None and a["action"] == "Buy")
         stop_ratio = with_stops / max(1, sum(1 for a in actions if a["action"] == "Buy"))
-        sizing_score = 0.7 * compliant_ratio + 0.3 * stop_ratio
+        sizing_score = _clamp(0.7 * compliant_ratio + 0.3 * stop_ratio)
     else:
-        sizing_score = 0.0  # no trades = no position sizing
+        sizing_score = SCORE_MIN  # no trades = no position sizing
 
     # --- Trading activity (25%) ---
     num_trades = len(trades)
     trade_ratio = num_trades / max(1, total_steps)
     if trade_ratio < 0.1:
-        activity_score = trade_ratio / 0.1 * 0.3  # penalize pure holders
+        activity_score = _clamp(trade_ratio / 0.1 * 0.3)  # penalize pure holders
     elif trade_ratio <= 0.7:
-        activity_score = 0.3 + (trade_ratio - 0.1) / 0.6 * 0.7
+        activity_score = _clamp(0.3 + (trade_ratio - 0.1) / 0.6 * 0.7)
     else:
-        activity_score = 1.0
+        activity_score = SCORE_MAX
 
     # --- PnL performance (15%) ---
     price = env._current_price()
     final_value = env.portfolio.value_at(price)
     pnl_pct = (final_value - INITIAL_BALANCE) / INITIAL_BALANCE
     pnl_score = 0.5 + (pnl_pct / 0.05) * 0.5
-    pnl_score = max(0.0, min(1.0, pnl_score))
+    pnl_score = _clamp(pnl_score)
 
     # --- Weighted total ---
     score = round(
         0.35 * risk_score + 0.25 * sizing_score + 0.25 * activity_score + 0.15 * pnl_score,
         4,
     )
-    score = max(0.0001, min(0.9999, score))
+    score = _clamp(score)
 
     reason = (
         f"Risk compliance: {risk_score:.2f} ({violations} violations). "
@@ -293,7 +306,7 @@ def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
     if metrics["completed_round_trips"] > 0:
         # Normalize: $0 expectancy = 0.5, ±$300 per trade = 0/1
         expectancy_score = 0.5 + (expectancy / 600.0)
-        expectancy_score = max(0.0, min(1.0, expectancy_score))
+        expectancy_score = _clamp(expectancy_score)
     else:
         expectancy_score = 0.1  # no round-trips = very poor
 
@@ -302,7 +315,7 @@ def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
     if metrics["completed_round_trips"] > 0:
         # Map avg R from [-1, +3] → [0, 1]. Target is R > 1.0
         r_score = (avg_r + 1.0) / 4.0
-        r_score = max(0.0, min(1.0, r_score))
+        r_score = _clamp(r_score)
     else:
         r_score = 0.1
 
@@ -313,12 +326,12 @@ def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
         compliance_rate = env.portfolio.compliant_trades / total_trades
     else:
         compliance_rate = 0.3  # no trades = mediocre
-    risk_score = compliance_rate
+    risk_score = _clamp(compliance_rate)
 
     # --- PnL performance (20%) ---
     pnl_pct = (final_value - INITIAL_BALANCE) / INITIAL_BALANCE
     pnl_score = 0.5 + (pnl_pct / 0.10) * 0.5
-    pnl_score = max(0.0, min(1.0, pnl_score))
+    pnl_score = _clamp(pnl_score)
 
     # --- Weighted total ---
     score = round(
@@ -328,7 +341,7 @@ def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
         + 0.20 * pnl_score,
         4,
     )
-    score = max(0.0001, min(0.9999, score))
+    score = _clamp(score)
 
     reason = (
         f"Expectancy: {expectancy_score:.3f} (${expectancy:+.2f}/trade — "

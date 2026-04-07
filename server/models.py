@@ -202,6 +202,6 @@ class GradeRequest(BaseModel):
 class GradeResponse(BaseModel):
     """Response from the grading endpoint."""
     task_id: str
-    score: float = Field(..., ge=0.0, le=1.0)
+    score: float = Field(..., gt=0.0, lt=1.0)
     reason: str
     breakdown: Dict[str, Any] = Field(default_factory=dict)
