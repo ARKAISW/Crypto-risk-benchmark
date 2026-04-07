@@ -147,14 +147,14 @@ def grade_easy(env: CryptoRiskEnv) -> Dict[str, Any]:
     enough_steps = len(actions) >= expected_steps
 
     if all_hold and enough_steps:
-        score = 1.0
+        score = 0.9999
         reason = (
             f"Agent correctly held for all {len(actions)} steps. "
             f"Demonstrated successful parsing of observation data including "
             f"technical indicators and risk management fields."
         )
     else:
-        score = 0.0
+        score = 0.0001
         non_hold = [a for a in action_types if a != "Hold"]
         reason = (
             f"Agent failed. Actions: {action_types}. "
@@ -233,7 +233,7 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
         0.35 * risk_score + 0.25 * sizing_score + 0.25 * activity_score + 0.15 * pnl_score,
         4,
     )
-    score = max(0.0, min(1.0, score))
+    score = max(0.0001, min(0.9999, score))
 
     reason = (
         f"Risk compliance: {risk_score:.2f} ({violations} violations). "
@@ -328,7 +328,7 @@ def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
         + 0.20 * pnl_score,
         4,
     )
-    score = max(0.0, min(1.0, score))
+    score = max(0.0001, min(0.9999, score))
 
     reason = (
         f"Expectancy: {expectancy_score:.3f} (${expectancy:+.2f}/trade — "

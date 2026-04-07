@@ -160,6 +160,8 @@ def env_request(
                 resp = requests.get(url, timeout=10.0)
             else:
                 resp = requests.post(url, json=json_data, timeout=10.0)
+            if not resp.ok:
+                print(f"Server returned error {resp.status_code}: {resp.text}")
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
