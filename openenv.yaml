@@ -8,7 +8,7 @@ metadata:
   description: "An OpenEnv-compliant environment for evaluating LLM agents on cryptocurrency risk management discipline."
   version: 1.0.0
   author: ARKAISW
-  difficulty_range: [0.0, 1.0]
+  difficulty_range: [0.0001, 0.9999]
 observation_space:
   type: json
   schema: Observation

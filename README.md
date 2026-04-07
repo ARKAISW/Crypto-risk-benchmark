@@ -198,8 +198,8 @@ This design ensures the agent receives **continuous feedback** — not just a bi
 | **Steps** | 5 |
 | **Volatility** | Low (1%) |
 | **Objective** | Parse observation data correctly and hold every step |
-| **Grader** | Binary — `1.0` if all actions are Hold, `0.0` otherwise |
-| **Expected Baseline** | `1.0` (trivial for any capable model) |
+| **Grader** | Binary — high score (~0.99) if all actions are Hold, low score (~0.01) otherwise. Scores strictly in (0, 1). |
+| **Expected Baseline** | `~0.99` (trivial for any capable model) |
 
 ### Task 2 — Medium: Risk-Constrained Active Trading
 | Property | Value |
@@ -270,7 +270,7 @@ python inference.py
 ============================================================
   FINAL RESULTS
 ============================================================
-  [Easy  ] Market Data Parsing & Hold                  → 1.0000
+  [Easy  ] Market Data Parsing & Hold                  → 0.9999
   [Medium] Risk-Constrained Active Trading             → 0.6500
   [Hard  ] Profitable Trading Under Extreme Volatility → 0.4200
 
@@ -278,6 +278,8 @@ python inference.py
   Total Time:   35.2s
 ============================================================
 ```
+
+All scores are strictly within (0, 1) — never exactly 0.0 or 1.0.
 
 ---
 

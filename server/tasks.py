@@ -7,7 +7,7 @@ Grading is aligned with professional risk management theory:
   Formula 3 — Position Sizing: Correct use of 1% risk per trade
 
 Three evaluation tasks with increasing difficulty:
-  • Easy   — Parse market data and hold (binary 0.0 or 1.0)
+  • Easy   — Parse market data and hold (binary pass/fail, score in (0,1))
   • Medium — Position sizing + risk compliance while actively trading
   • Hard   — Achieve positive expectancy in extreme volatility (the "pro" test)
 
@@ -66,7 +66,7 @@ TASK_CONFIGS: Dict[str, TaskConfig] = {
             "TEST: Can the agent correctly read market observations and follow simple "
             "instructions? The agent must parse all fields (price, indicators, portfolio, "
             "stop-loss levels) and execute a Hold action for all 5 steps. "
-            "Grader: binary 1.0 if all Hold, 0.0 otherwise."
+            "Grader: high score if all Hold, low score otherwise. Scores strictly in (0, 1)."
         ),
         max_steps=5,
         volatility=0.01,
@@ -147,8 +147,9 @@ def create_env_for_task(task_id: str) -> CryptoRiskEnv:
 
 def grade_easy(env: CryptoRiskEnv) -> Dict[str, Any]:
     """
-    Easy grader: binary score.
-    1.0 if every action was Hold for all steps, 0.0 otherwise.
+    Easy grader: pass/fail score in (0, 1).
+    High score (~0.9999) if every action was Hold for all steps,
+    low score (~0.0001) otherwise. Never returns exactly 0.0 or 1.0.
 
     Tests: Can the agent parse observations and follow instructions?
     """

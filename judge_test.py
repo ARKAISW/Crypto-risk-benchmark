@@ -56,8 +56,8 @@ requests.post(f"{base}/reset", json={"task_id": "easy"})
 for i in range(5):
     requests.post(f"{base}/step", json={"action": "Hold", "amount": None})
 g = requests.post(f"{base}/grade").json()
-print(f"  Score: {g['score']} (expected 1.0)")
-assert g["score"] == 1.0, f"FAIL: Expected 1.0, got {g['score']}"
+print(f"  Score: {g['score']} (expected ~0.9999)")
+assert 0.99 <= g["score"] < 1.0, f"FAIL: Expected ~0.9999, got {g['score']}"
 
 # 8. Easy fail case -> score 0.0
 print("\n=== 8. Easy Fail (One Buy -> 0.0) ===")
@@ -69,8 +69,8 @@ for i in range(5):
         act = {"action": "Hold", "amount": None}
     requests.post(f"{base}/step", json=act)
 g = requests.post(f"{base}/grade").json()
-print(f"  Score: {g['score']} (expected 0.0)")
-assert g["score"] == 0.0, f"FAIL: Expected 0.0, got {g['score']}"
+print(f"  Score: {g['score']} (expected ~0.0001)")
+assert 0.0 < g["score"] <= 0.01, f"FAIL: Expected ~0.0001, got {g['score']}"
 
 # 9. Medium task - compliant trading
 print("\n=== 9. Medium Task (Compliant Trading) ===")
@@ -86,7 +86,7 @@ for i in range(20):
 g = requests.post(f"{base}/grade").json()
 print(f"  Score: {g['score']:.4f}")
 print(f"  Breakdown: {json.dumps(g['breakdown'], indent=4)}")
-assert 0.0 <= g["score"] <= 1.0
+assert 0.0 < g["score"] < 1.0
 
 # 10. Medium task - with violations
 print("\n=== 10. Medium Task (With Violations) ===")
@@ -105,7 +105,7 @@ for i in range(20):
         violations += 1
 g = requests.post(f"{base}/grade").json()
 print(f"  Score: {g['score']:.4f}, Violations: {violations}")
-assert 0.0 <= g["score"] <= 1.0
+assert 0.0 < g["score"] < 1.0
 
 # 11. Hard task
 print("\n=== 11. Hard Task ===")
@@ -121,7 +121,7 @@ for i in range(30):
 g = requests.post(f"{base}/grade").json()
 print(f"  Score: {g['score']:.4f}")
 print(f"  Breakdown: {json.dumps(g['breakdown'], indent=4)}")
-assert 0.0 <= g["score"] <= 1.0
+assert 0.0 < g["score"] < 1.0
 
 # 12. Scores vary (not constant)
 print("\n=== 12. Graders Produce Different Scores ===")
