@@ -36,8 +36,32 @@ SCORE_MIN = 0.01
 SCORE_MAX = 0.99
 
 def _clamp(value: float) -> float:
-    """Clamp a score to strictly within (0, 1) safely."""
-    return max(SCORE_MIN, min(SCORE_MAX, float(value)))
+    """Clamp a score to strictly within (0, 1) safely.
+    
+    Handles NaN, Inf, -Inf, and any out-of-range values.
+    """
+    v = float(value)
+    # NaN or Inf -> fallback to midpoint
+    if not math.isfinite(v):
+        return 0.5
+    return max(SCORE_MIN, min(SCORE_MAX, v))
+
+
+def _safe_score(value: float) -> float:
+    """Final safety net: ensures the score is STRICTLY in (0, 1).
+    
+    Applied as the very last step after all arithmetic and rounding.
+    This is the LAST line of defense before returning a score.
+    """
+    v = float(value)
+    if not math.isfinite(v):
+        return 0.5
+    # Hard bounds: never return exactly 0.0 or 1.0
+    if v <= 0.0:
+        return 0.001
+    if v >= 1.0:
+        return 0.999
+    return v
 
 # ---------------------------------------------------------------------------
 # Task configuration
@@ -179,7 +203,7 @@ def grade_easy(env: CryptoRiskEnv) -> Dict[str, Any]:
             f"Steps taken: {len(actions)}/{expected_steps}."
         )
 
-    score = round(_clamp(base_score + pnl_bonus), 6)
+    score = _safe_score(round(_clamp(base_score + pnl_bonus), 6))
 
     return {
         "task_id": "easy",
@@ -246,7 +270,7 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
 
     # --- Weighted total ---
     raw_score = 0.35 * risk_score + 0.25 * sizing_score + 0.25 * activity_score + 0.15 * pnl_score + diversity_factor
-    score = round(_clamp(raw_score), 6)
+    score = _safe_score(round(_clamp(raw_score), 6))
 
     reason = (
         f"Risk compliance: {risk_score:.2f} ({violations} violations). "
@@ -324,7 +348,7 @@ def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
 
     # --- Weighted total ---
     raw_score = 0.30 * expectancy_score + 0.25 * r_score + 0.25 * risk_score + 0.20 * pnl_score + diversity_factor
-    score = round(_clamp(raw_score), 6)
+    score = _safe_score(round(_clamp(raw_score), 6))
 
     reason = (
         f"Expectancy: {expectancy_score:.3f} (${expectancy:+.2f}/trade). "

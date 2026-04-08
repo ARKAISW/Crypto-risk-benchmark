@@ -156,6 +156,14 @@ def grade():
             detail="Episode is not done yet. Complete all steps before grading.",
         )
     result = grade_task(env)
+
+    # Final safety net: ensure score is strictly in (0, 1) before Pydantic validation
+    import math
+    score = float(result.get("score", 0.5))
+    if not math.isfinite(score) or score <= 0.0 or score >= 1.0:
+        score = max(0.001, min(0.999, score if math.isfinite(score) else 0.5))
+    result["score"] = score
+
     return GradeResponse(**result)
 
 
