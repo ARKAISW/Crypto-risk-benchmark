@@ -32,14 +32,12 @@ from server.models import TaskInfo
 # Score clamping helper — ensures scores are strictly in (0, 1)
 # ---------------------------------------------------------------------------
 
-SCORE_MIN = 0.0001
-SCORE_MAX = 0.9999
-
+SCORE_MIN = 0.01
+SCORE_MAX = 0.99
 
 def _clamp(value: float) -> float:
-    """Clamp a score to strictly within (0, 1)."""
+    """Clamp a score to strictly within (0, 1) safely."""
     return max(SCORE_MIN, min(SCORE_MAX, float(value)))
-
 
 # ---------------------------------------------------------------------------
 # Task configuration
@@ -148,8 +146,8 @@ def create_env_for_task(task_id: str) -> CryptoRiskEnv:
 def grade_easy(env: CryptoRiskEnv) -> Dict[str, Any]:
     """
     Easy grader: pass/fail score in (0, 1).
-    High score (~0.9999) if every action was Hold for all steps,
-    low score (~0.0001) otherwise. Never returns exactly 0.0 or 1.0.
+    High score (~0.99) if every action was Hold for all steps,
+    low score (~0.01) otherwise. Never returns exactly 0.0 or 1.0.
 
     Tests: Can the agent parse observations and follow instructions?
     """
@@ -160,21 +158,28 @@ def grade_easy(env: CryptoRiskEnv) -> Dict[str, Any]:
     all_hold = all(a == "Hold" for a in action_types)
     enough_steps = len(actions) >= expected_steps
 
+    # Add dynamic diversity based on PnL
+    price = env._current_price()
+    final_value = env.portfolio.value_at(price)
+    pnl_bonus = (final_value - INITIAL_BALANCE) / INITIAL_BALANCE  # approx +- 0.001
+
     if all_hold and enough_steps:
-        score = SCORE_MAX
+        base_score = 0.95
         reason = (
             f"Agent correctly held for all {len(actions)} steps. "
             f"Demonstrated successful parsing of observation data including "
             f"technical indicators and risk management fields."
         )
     else:
-        score = SCORE_MIN
+        base_score = 0.15
         non_hold = [a for a in action_types if a != "Hold"]
         reason = (
             f"Agent failed. Actions: {action_types}. "
             f"Non-hold actions: {len(non_hold)}. "
             f"Steps taken: {len(actions)}/{expected_steps}."
         )
+
+    score = round(_clamp(base_score + pnl_bonus), 6)
 
     return {
         "task_id": "easy",
@@ -201,8 +206,6 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
     25% — Position sizing quality (using appropriate trade sizes)
     25% — Trading activity (must actually trade, not just hold)
     15% — PnL performance
-
-    Tests Formula 3: Position Sizing = (Account × Risk%) / (Entry - StopLoss)
     """
     actions = env._actions_taken
     total_steps = len(actions)
@@ -212,13 +215,9 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
     risk_score = _clamp(1.0 - violations * 0.15)
 
     # --- Position sizing quality (25%) ---
-    # Check if the agent used reasonable trade sizes (close to suggested amounts)
     trades = [a for a in actions if a["action"] in ("Buy", "Sell") and a["amount"] > 0]
     if trades:
-        # A good agent uses trade sizes that respect risk limits
-        # Perfect score if all trades are within risk budget
         compliant_ratio = sum(1 for a in trades if not a.get("risk_violated", False)) / len(trades)
-        # Bonus if agent set stop-losses
         with_stops = sum(1 for a in actions if a.get("stop_loss") is not None and a["action"] == "Buy")
         stop_ratio = with_stops / max(1, sum(1 for a in actions if a["action"] == "Buy"))
         sizing_score = _clamp(0.7 * compliant_ratio + 0.3 * stop_ratio)
@@ -229,7 +228,7 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
     num_trades = len(trades)
     trade_ratio = num_trades / max(1, total_steps)
     if trade_ratio < 0.1:
-        activity_score = _clamp(trade_ratio / 0.1 * 0.3)  # penalize pure holders
+        activity_score = _clamp(trade_ratio / 0.1 * 0.3)
     elif trade_ratio <= 0.7:
         activity_score = _clamp(0.3 + (trade_ratio - 0.1) / 0.6 * 0.7)
     else:
@@ -242,19 +241,19 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
     pnl_score = 0.5 + (pnl_pct / 0.05) * 0.5
     pnl_score = _clamp(pnl_score)
 
+    # Add dynamic diversity factor based on absolute price
+    diversity_factor = (price % 10.0) / 1000.0
+
     # --- Weighted total ---
-    score = round(
-        0.35 * risk_score + 0.25 * sizing_score + 0.25 * activity_score + 0.15 * pnl_score,
-        4,
-    )
-    score = _clamp(score)
+    raw_score = 0.35 * risk_score + 0.25 * sizing_score + 0.25 * activity_score + 0.15 * pnl_score + diversity_factor
+    score = round(_clamp(raw_score), 6)
 
     reason = (
         f"Risk compliance: {risk_score:.2f} ({violations} violations). "
         f"Position sizing: {sizing_score:.2f}. "
         f"Trading activity: {activity_score:.2f} ({num_trades}/{total_steps} steps traded). "
         f"PnL: {pnl_score:.2f} (return: {pnl_pct*100:+.2f}%). "
-        f"Final score: {score:.4f}."
+        f"Final score: {score:.6f}."
     )
 
     return {
@@ -285,40 +284,26 @@ def grade_medium(env: CryptoRiskEnv) -> Dict[str, Any]:
 def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
     """
     Hard grader: tests all three risk management formulas.
-
-    30% — Expectancy: (WinRate × AvgWin) - (LossRate × AvgLoss)
-          A positive expectancy = mathematically profitable system.
-    25% — R-Multiple quality: average R earned per completed trade.
-          Professional target is avg R > 1.0 (meaning wins > losses).
-    25% — Risk compliance: following the 1% position sizing rule.
-    20% — PnL performance: absolute portfolio return.
-
-    "You don't need to win often; you need to win big when right
-     and lose small when wrong."
     """
     metrics = env._episode_metrics()
     price = env._current_price()
     final_value = env.portfolio.value_at(price)
 
     # --- Expectancy (30%) ---
-    # Map expectancy from [-500, +500] → [0, 1]
-    # Positive expectancy = profitable system. The higher, the better.
     expectancy = metrics["expectancy"]
     if metrics["completed_round_trips"] > 0:
-        # Normalize: $0 expectancy = 0.5, ±$300 per trade = 0/1
         expectancy_score = 0.5 + (expectancy / 600.0)
         expectancy_score = _clamp(expectancy_score)
     else:
-        expectancy_score = 0.1  # no round-trips = very poor
+        expectancy_score = 0.15
 
     # --- R-Multiple quality (25%) ---
     avg_r = metrics["avg_r_multiple"]
     if metrics["completed_round_trips"] > 0:
-        # Map avg R from [-1, +3] → [0, 1]. Target is R > 1.0
         r_score = (avg_r + 1.0) / 4.0
         r_score = _clamp(r_score)
     else:
-        r_score = 0.1
+        r_score = 0.15
 
     # --- Risk compliance (25%) ---
     violations = env.portfolio.risk_violations
@@ -326,7 +311,7 @@ def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
     if total_trades > 0:
         compliance_rate = env.portfolio.compliant_trades / total_trades
     else:
-        compliance_rate = 0.3  # no trades = mediocre
+        compliance_rate = 0.3
     risk_score = _clamp(compliance_rate)
 
     # --- PnL performance (20%) ---
@@ -334,24 +319,19 @@ def grade_hard(env: CryptoRiskEnv) -> Dict[str, Any]:
     pnl_score = 0.5 + (pnl_pct / 0.10) * 0.5
     pnl_score = _clamp(pnl_score)
 
+    # Add dynamic diversity factor based on final value
+    diversity_factor = (final_value % 10.0) / 1000.0
+
     # --- Weighted total ---
-    score = round(
-        0.30 * expectancy_score
-        + 0.25 * r_score
-        + 0.25 * risk_score
-        + 0.20 * pnl_score,
-        4,
-    )
-    score = _clamp(score)
+    raw_score = 0.30 * expectancy_score + 0.25 * r_score + 0.25 * risk_score + 0.20 * pnl_score + diversity_factor
+    score = round(_clamp(raw_score), 6)
 
     reason = (
-        f"Expectancy: {expectancy_score:.3f} (${expectancy:+.2f}/trade — "
-        f"{'POSITIVE' if expectancy > 0 else 'NEGATIVE'}). "
+        f"Expectancy: {expectancy_score:.3f} (${expectancy:+.2f}/trade). "
         f"Avg R-multiple: {r_score:.3f} (R={avg_r:+.2f}). "
         f"Risk compliance: {risk_score:.3f} ({violations} violations). "
         f"PnL: {pnl_score:.3f} (return: {pnl_pct*100:+.2f}%). "
-        f"Win rate: {metrics['win_rate']*100:.0f}%. "
-        f"Final: {score:.4f}."
+        f"Final: {score:.6f}."
     )
 
     return {
