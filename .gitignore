@@ -2,3 +2,7 @@ __pycache__/
 .venv/
 .env
 *.pyc
+*.txt
+*.egg-info/
+push_hf_err.txt
+tee_out.txt

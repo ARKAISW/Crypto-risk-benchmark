@@ -339,7 +339,7 @@ def run_task(client: OpenAI, task_id: str, task_name: str, max_steps: int) -> Di
     reason = grade_result["reason"]
     breakdown = grade_result.get("breakdown", {})
 
-    print(f"[END] {score}")
+    print(f"[END] task={task_id} score={score} steps={step_num}", flush=True)
     print(f"\n  Score:  {score:.4f}")
     print(f"  Reason: {reason}")
 
