@@ -439,14 +439,24 @@ class CryptoRiskEnv:
         pnl_reward = pnl_change * 10  # scale to meaningful range
         self._prev_portfolio_value = new_portfolio_value
 
-        # Total step reward
-        step_reward = round(pnl_reward + risk_penalty + compliance_bonus, 6)
-        self._cumulative_reward += step_reward
-        self._step_rewards.append(step_reward)
+        # Total step reward (raw)
+        raw_step_reward = round(pnl_reward + risk_penalty + compliance_bonus, 6)
+        
+        # Squash rewards to strictly [0.001, 0.999] bounds
+        def _squash(x: float) -> float:
+            v = 1.0 / (1.0 + math.exp(-x))
+            return max(0.001, min(0.999, v))
+
+        # Update cumulative with raw reward before squashing
+        self._cumulative_reward += raw_step_reward
+        self._step_rewards.append(raw_step_reward)
+
+        step_reward = round(_squash(raw_step_reward), 6)
+        cumulative_reward_squashed = round(_squash(self._cumulative_reward), 6)
 
         reward = Reward(
-            step_reward=round(step_reward, 6),
-            cumulative_reward=round(self._cumulative_reward, 6),
+            step_reward=step_reward,
+            cumulative_reward=cumulative_reward_squashed,
             risk_penalty=round(risk_penalty, 6),
             pnl_reward=round(pnl_reward, 6),
             compliance_bonus=round(compliance_bonus, 6),
