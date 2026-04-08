@@ -457,9 +457,9 @@ class CryptoRiskEnv:
         reward = Reward(
             step_reward=step_reward,
             cumulative_reward=cumulative_reward_squashed,
-            risk_penalty=round(risk_penalty, 6),
-            pnl_reward=round(pnl_reward, 6),
-            compliance_bonus=round(compliance_bonus, 6),
+            risk_penalty=round(_squash(risk_penalty), 6),
+            pnl_reward=round(_squash(pnl_reward), 6),
+            compliance_bonus=round(_squash(compliance_bonus), 6),
         )
 
         info["portfolio_value"] = round(new_portfolio_value, 2)
