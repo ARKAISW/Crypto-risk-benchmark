@@ -32,8 +32,8 @@ from server.models import TaskInfo
 # Score clamping helper — ensures scores are strictly in (0, 1)
 # ---------------------------------------------------------------------------
 
-SCORE_MIN = 0.01
-SCORE_MAX = 0.99
+SCORE_MIN = 0.001
+SCORE_MAX = 0.999
 
 def _clamp(value: float) -> float:
     """Clamp a score to strictly within (0, 1) safely.

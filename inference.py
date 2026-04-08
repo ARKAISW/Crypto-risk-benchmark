@@ -402,8 +402,9 @@ def main():
     total_score = 0.0
     for tid, r in results.items():
         print(f"  [{r['difficulty']:6s}] {r['name']:50s} -> {r['score']:.4f}")
-        total_score += r["score"]
-    avg_score = total_score / len(results) if results else 0.0
+        total_score += max(0.001, min(0.999, float(r["score"])))
+    avg_score = total_score / len(results) if results else 0.001
+    avg_score = max(0.001, min(0.999, avg_score))
     print(f"\n  Average Score: {avg_score:.4f}")
     print(f"  Total Time:   {elapsed:.1f}s")
     print(f"{'='*60}")
@@ -413,7 +414,7 @@ def main():
         "model": MODEL_NAME,
         "average_score": round(avg_score, 4),
         "total_time_seconds": round(elapsed, 1),
-        "tasks": {tid: {"score": r["score"], "breakdown": r.get("breakdown", {})} for tid, r in results.items()},
+        "tasks": {tid: {"score": max(0.001, min(0.999, float(r["score"]))), "breakdown": r.get("breakdown", {})} for tid, r in results.items()},
     }
     print(json.dumps(json_results, indent=2))
 
